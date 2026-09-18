@@ -96,14 +96,16 @@ public class BlackjackPayloads {
         /** Helper para construir el payload a partir de una BlackjackGame real. */
         public static GameStatePayload from(BlackjackGame game) {
             java.util.List<josgoi.blackjack.game.Card> dealerHand = game.dealerHand();
-            boolean hideHoleCard = game.phase() == BlackjackGame.Phase.PLAYER_TURN && dealerHand.size() >= 2;
+            boolean hideHoleCard = (game.phase() == BlackjackGame.Phase.PLAYER_TURN
+                    || game.phase() == BlackjackGame.Phase.DEALING)
+                    && dealerHand.size() >= 2;
 
             java.util.List<String> dealerCardIds;
             int dealerValue;
             if (hideHoleCard) {
                 // Solo mostramos la primera carta del dealer; la segunda queda
                 // "boca abajo" hasta que el jugador se plante o se pase.
-                josgoi.blackjack.game.Card visible = dealerHand.getFirst();
+                josgoi.blackjack.game.Card visible = dealerHand.get(0);
                 dealerCardIds = java.util.List.of(visible.textureId(), "HIDDEN");
                 dealerValue = BlackjackGame.handValue(java.util.List.of(visible));
             } else {

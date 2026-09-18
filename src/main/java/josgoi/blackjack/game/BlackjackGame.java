@@ -13,6 +13,7 @@ public class BlackjackGame {
 
     public enum Phase {
         WAITING_FOR_BET,   // mesa libre, esperando que alguien apueste y pida repartir
+        DEALING,           // repartiendo las 4 cartas iniciales, una por una
         PLAYER_TURN,       // jugador puede pedir carta o plantarse
         DEALER_TURN,       // el dealer esta jugando su mano (automatico)
         ROUND_OVER         // se muestra el resultado hasta que alguien empiece otra ronda
@@ -29,6 +30,7 @@ public class BlackjackGame {
     private Phase phase = Phase.WAITING_FOR_BET;
     private Result lastResult = Result.NONE;
     private int currentBet = 0;
+    private final java.util.Deque<Boolean> dealQueue = new java.util.ArrayDeque<>(); // true = jugador, false = dealer
 
     public BlackjackGame() {
         this.deck = new Deck(new Random());
@@ -44,16 +46,38 @@ public class BlackjackGame {
         currentBet = bet;
         lastResult = Result.NONE;
 
-        playerHand.add(deck.draw());
-        dealerHand.add(deck.draw());
-        playerHand.add(deck.draw());
-        dealerHand.add(deck.draw()); // la segunda del dealer se muestra boca abajo en el cliente
+        dealQueue.clear();
+        dealQueue.add(true);   // carta 1 al jugador
+        dealQueue.add(false);  // carta 1 al dealer (visible)
+        dealQueue.add(true);   // carta 2 al jugador
+        dealQueue.add(false);  // carta 2 al dealer (esta queda "boca abajo")
 
+        phase = Phase.DEALING;
+    }
+
+    /**
+     * Reparte UNA carta del reparto inicial (al jugador o al dealer, segun
+     * toque). Devuelve true si repartio carta (hay que seguir llamando esto
+     * desde afuera con una pausa entre medio), false si ya se repartieron
+     * las 4 cartas iniciales y toca llamar a finishDealing().
+     */
+    public boolean dealStep() {
+        if (dealQueue.isEmpty()) return false;
+        boolean toPlayer = dealQueue.poll();
+        if (toPlayer) {
+            playerHand.add(deck.draw());
+        } else {
+            dealerHand.add(deck.draw());
+        }
+        return true;
+    }
+
+    /** Se llama cuando ya se repartieron las 4 cartas iniciales. */
+    public void finishDealing() {
         if (handValue(playerHand) == 21) {
-            // Blackjack natural: se resuelve enseguida
+            // Blackjack natural: pasamos al turno del dealer, que se resuelve
+            // paso a paso igual que cuando el jugador se planta.
             phase = Phase.DEALER_TURN;
-            while (dealerHitStep()) { /* nada */ }
-            finishDealerTurn();
         } else {
             phase = Phase.PLAYER_TURN;
         }
@@ -71,6 +95,8 @@ public class BlackjackGame {
     public void stand() {
         if (phase != Phase.PLAYER_TURN) return;
         phase = Phase.DEALER_TURN;
+        // Ya no resolvemos todo de una: el dealer pedira carta de a una, con
+        // pausa entre cada una, controlado desde BlackjackTableBlockEntity.
     }
 
     /**

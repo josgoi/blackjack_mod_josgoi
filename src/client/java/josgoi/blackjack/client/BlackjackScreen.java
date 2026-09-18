@@ -114,7 +114,9 @@ public class BlackjackScreen extends HandledScreen<BlackjackScreenHandler> {
                 10, 55, 0xFFFFFF, false);
         drawCardRow(context, lastState.playerCards(), 10, 67);
 
-        boolean roundInProgress = "PLAYER_TURN".equals(lastState.phase()) || "DEALER_TURN".equals(lastState.phase());
+        boolean roundInProgress = "DEALING".equals(lastState.phase())
+                || "PLAYER_TURN".equals(lastState.phase())
+                || "DEALER_TURN".equals(lastState.phase());
         int betToShow = roundInProgress ? lastState.currentBet() : pendingBet;
         context.drawText(textRenderer,
                 Text.literal("Apuesta: " + betToShow + " emeraldas"),

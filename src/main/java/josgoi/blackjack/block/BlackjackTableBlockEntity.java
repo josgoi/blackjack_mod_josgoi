@@ -17,15 +17,14 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 
 public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedScreenHandlerFactory<BlockPos> {
 
     private final BlackjackGame game = new BlackjackGame();
     private final CardDisplayManager cardDisplay = new CardDisplayManager();
     private boolean payoutApplied = false;
-    private int dealerTickTimer = 0;
-    private ServerPlayerEntity pendingSettlePlayer;
+    private int actionTickTimer = 0;
+    private ServerPlayerEntity currentPlayer; // el jugador de la ronda actual
 
     public BlackjackTableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BLACKJACK_TABLE, pos, state);
@@ -34,7 +33,9 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
     // ----- Acciones que llegan desde ModNetworking -----
 
     public void onBet(ServerPlayerEntity player, int amount) {
-        if (game.phase() == BlackjackGame.Phase.PLAYER_TURN || game.phase() == BlackjackGame.Phase.DEALER_TURN) {
+        if (game.phase() == BlackjackGame.Phase.PLAYER_TURN
+                || game.phase() == BlackjackGame.Phase.DEALER_TURN
+                || game.phase() == BlackjackGame.Phase.DEALING) {
             player.sendMessage(Text.literal("Ya hay una ronda en curso."), false);
             return;
         }
@@ -42,13 +43,15 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
 
         int emeraldsHeld = countItem(player, Items.EMERALD);
         if (emeraldsHeld < amount) {
-            player.sendMessage(Text.literal("No tienes suficientes emeraldas."), false);
+            player.sendMessage(Text.literal("No tienes suficientes emeraldas (tienes " + emeraldsHeld + ")."), false);
             return;
         }
 
         removeItems(player, Items.EMERALD, amount);
         payoutApplied = false;
-        game.startRound(amount);
+        currentPlayer = player;
+        game.startRound(amount); // deja el juego en fase DEALING, con las 4 cartas pendientes
+        actionTickTimer = 10; // medio segundo antes de la primera carta
         onStateChanged();
     }
 
@@ -62,35 +65,52 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
     public void onStand(ServerPlayerEntity player) {
         if (game.phase() != BlackjackGame.Phase.PLAYER_TURN) return;
         game.stand();
-        pendingSettlePlayer = player;
-        dealerTickTimer = 20; // ~1 segundo antes de que el dealer pida su primera carta
+        actionTickTimer = 20; // ~1 segundo antes de que el dealer pida su primera carta
         onStateChanged();
     }
 
     /** Se llama una vez por tick del servidor mientras el bloque esta cargado. */
-    public static void tick(World world, BlockPos pos, BlockState state, BlackjackTableBlockEntity be) {
+    public static void tick(net.minecraft.world.World world, BlockPos pos, BlockState state, BlackjackTableBlockEntity be) {
         if (world.isClient) return;
-        be.tickDealer((ServerWorld) world);
+        be.tickAuto((ServerWorld) world);
     }
 
-    private void tickDealer(ServerWorld world) {
-        if (game.phase() != BlackjackGame.Phase.DEALER_TURN) return;
-
-        if (dealerTickTimer > 0) {
-            dealerTickTimer--;
+    /** Avanza el reparto inicial paso a paso, o el turno del dealer paso a paso, segun la fase. */
+    private void tickAuto(ServerWorld world) {
+        if (game.phase() == BlackjackGame.Phase.DEALING) {
+            if (actionTickTimer > 0) {
+                actionTickTimer--;
+                return;
+            }
+            if (game.dealStep()) {
+                actionTickTimer = 10; // medio segundo entre carta y carta del reparto inicial
+                onStateChanged();
+            } else {
+                game.finishDealing();
+                if (game.phase() == BlackjackGame.Phase.DEALER_TURN) {
+                    // Blackjack natural: el dealer ya tiene que empezar a jugar su turno.
+                    actionTickTimer = 20;
+                }
+                onStateChanged();
+            }
             return;
         }
 
-        if (game.dealerHitStep()) {
-            dealerTickTimer = 20; // 1 segundo entre carta y carta
-            onStateChanged();
-        } else {
-            game.finishDealerTurn();
-            if (pendingSettlePlayer != null) {
-                settleIfRoundJustEnded(pendingSettlePlayer);
-                pendingSettlePlayer = null;
+        if (game.phase() == BlackjackGame.Phase.DEALER_TURN) {
+            if (actionTickTimer > 0) {
+                actionTickTimer--;
+                return;
             }
-            onStateChanged();
+            if (game.dealerHitStep()) {
+                actionTickTimer = 20; // 1 segundo entre carta y carta
+                onStateChanged();
+            } else {
+                game.finishDealerTurn();
+                if (currentPlayer != null) {
+                    settleIfRoundJustEnded(currentPlayer);
+                }
+                onStateChanged();
+            }
         }
     }
 
