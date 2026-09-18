@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blackjack:item/card_four_of_clubs"
+  }
+}

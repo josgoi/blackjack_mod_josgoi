@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "blackjack:item/card_three_of_diamonds"
+  }
+}

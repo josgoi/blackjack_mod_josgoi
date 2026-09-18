@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "blackjack",
+	"version": "${version}",
+	"name": "Blackjack",
+	"description": "Mesa de Blackjack jugable para tu server de Cobblemon.",
+	"authors": [
+		"josgoi"
+	],
+	"license": "CC0-1.0",
+	"icon": "assets/blackjack/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"josgoi.blackjack.BlackjackMod"
+		],
+		"client": [
+			"josgoi.blackjack.client.BlackjackModClient"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~1.21",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
