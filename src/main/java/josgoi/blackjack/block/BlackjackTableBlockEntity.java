@@ -25,6 +25,7 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
     private boolean payoutApplied = false;
     private int actionTickTimer = 0;
     private ServerPlayerEntity currentPlayer; // el jugador de la ronda actual
+    private boolean pendingHit = false; // true mientras esperamos para entregar la carta pedida
 
     public BlackjackTableBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.BLACKJACK_TABLE, pos, state);
@@ -56,10 +57,9 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
     }
 
     public void onHit(ServerPlayerEntity player) {
-        if (game.phase() != BlackjackGame.Phase.PLAYER_TURN) return;
-        game.hit();
-        settleIfRoundJustEnded(player);
-        onStateChanged();
+        if (game.phase() != BlackjackGame.Phase.PLAYER_TURN || pendingHit) return;
+        pendingHit = true;
+        actionTickTimer = 10; // medio segundo antes de que aparezca la carta pedida
     }
 
     public void onStand(ServerPlayerEntity player) {
@@ -76,7 +76,20 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
     }
 
     /** Avanza el reparto inicial paso a paso, o el turno del dealer paso a paso, segun la fase. */
+    /** Avanza el reparto inicial paso a paso, o el turno del dealer paso a paso, segun la fase. */
     private void tickAuto(ServerWorld world) {
+        if (pendingHit) {
+            if (actionTickTimer > 0) {
+                actionTickTimer--;
+                return;
+            }
+            pendingHit = false;
+            game.hit();
+            settleIfRoundJustEnded(currentPlayer);
+            onStateChanged();
+            return;
+        }
+
         if (game.phase() == BlackjackGame.Phase.DEALING) {
             if (actionTickTimer > 0) {
                 actionTickTimer--;

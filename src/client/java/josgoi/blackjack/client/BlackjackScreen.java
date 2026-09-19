@@ -119,7 +119,7 @@ public class BlackjackScreen extends HandledScreen<BlackjackScreenHandler> {
                 || "DEALER_TURN".equals(lastState.phase());
         int betToShow = roundInProgress ? lastState.currentBet() : pendingBet;
         context.drawText(textRenderer,
-                Text.literal("Apuesta: " + betToShow + " emeraldas"),
+                Text.literal("Apuesta: " + betToShow + " esmeraldas"),
                 60, 100, 0xFFD700, false);
 
         if (!"NONE".equals(lastState.lastResult()) && "ROUND_OVER".equals(lastState.phase())) {
