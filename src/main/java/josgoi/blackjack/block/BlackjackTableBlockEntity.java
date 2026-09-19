@@ -141,12 +141,12 @@ public class BlackjackTableBlockEntity extends BlockEntity implements ExtendedSc
 
     private String resultMessage(BlackjackGame.Result result, int payout) {
         return switch (result) {
-            case PLAYER_BLACKJACK -> "Blackjack! Ganas " + payout + " emeralds.";
-            case PLAYER_WIN -> "Ganaste! +" + payout + " emeralds.";
-            case DEALER_BUST -> "El dealer se paso! Ganaste +" + payout + " emeralds.";
+            case PLAYER_BLACKJACK -> "Blackjack! Ganas " + payout + " esmeraldas.";
+            case PLAYER_WIN -> "Tu ganas! +" + payout + " emeralds.";
+            case DEALER_BUST -> "El dealer se paso! Ganas +" + payout + " esmeraldas.";
             case PUSH -> "Empate, se te devuelve la apuesta.";
-            case DEALER_WIN -> "Gana la casa. Perdiste la apuesta.";
-            case PLAYER_BUST -> "Te pasaste de 21. Perdiste la apuesta.";
+            case DEALER_WIN -> "Gana la casa. Has perdido la apuesta.";
+            case PLAYER_BUST -> "Te has pasado de 21. Has perdido la apuesta.";
             case NONE -> "";
         };
     }
